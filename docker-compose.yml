@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # Backend FastAPI Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ecommerce-chatbot-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGODB_URL=mongodb+srv://godnanijatin:Vj7ZIuzkl5wX0aiY@cluster0.l0mhrl9.mongodb.net/ecommerce_chatbot?retryWrites=true&w=majority
+      - DATABASE_NAME=ecommerce_chatbot
+    volumes:
+      - ./backend:/app
+      - /app/__pycache__
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - chatbot-network
+
+  # Frontend React Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ecommerce-chatbot-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - chatbot-network
+
+  # Optional: MongoDB local instance (if you want to use local DB instead of Atlas)
+  # mongodb:
+  #   image: mongo:6.0
+  #   container_name: ecommerce-chatbot-db
+  #   ports:
+  #     - "27017:27017"
+  #   environment:
+  #     MONGO_INITDB_ROOT_USERNAME: admin
+  #     MONGO_INITDB_ROOT_PASSWORD: password123
+  #     MONGO_INITDB_DATABASE: ecommerce_chatbot
+  #   volumes:
+  #     - mongodb_data:/data/db
+  #     - ./backend/data:/docker-entrypoint-initdb.d
+  #   restart: unless-stopped
+  #   networks:
+  #     - chatbot-network
+
+networks:
+  chatbot-network:
+    driver: bridge
+
+# volumes:
+#   mongodb_data:
